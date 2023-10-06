@@ -4,6 +4,7 @@ using tp24_api.Models;
 var appBuilder = WebApplication.CreateBuilder(args);
 
 appBuilder.Services.AddControllers();
+appBuilder.Services.AddScoped<IReceivablesRepository, ReceivablesRepository>();
 appBuilder.Services.AddDbContext<ReceivablesContext>(options => options.UseInMemoryDatabase("ReceivableList"));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
