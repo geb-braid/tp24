@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.EntityFrameworkCore;
 
 namespace tp24_api.Models;
@@ -56,11 +57,22 @@ public class ReceivablesRepository : IReceivablesRepository
             )
             group currencyValues by openClosedReceivables.Key;
 
-        var statsByStatusAndCurrency = await statsGroupings.ToDictionaryAwaitAsync(
-            grouping => ValueTask.FromResult(grouping.Key.IsOpen ? "Open" : "Closed"),
-            async grouping => await grouping.ToDictionaryAwaitAsync(
-                line => ValueTask.FromResult(line.CurrencyCode),
-                async line => new Stats (await line.Total, await line.Max)));
+        // converts groupings into dictionaries
+        var statsByStatusAndCurrency = (
+            await statsGroupings.ToDictionaryAwaitAsync(
+                keySelector: grouping =>
+                    ValueTask.FromResult(grouping.Key.IsOpen ? "Open" : "Closed"),
+                elementSelector: async grouping =>
+                    (
+                        await grouping.ToDictionaryAwaitAsync(
+                            keySelector: line =>
+                                ValueTask.FromResult(line.CurrencyCode),
+                            elementSelector: async line =>
+                                new Stats (await line.Total, await line.Max))
+                    )
+                    .ToImmutableDictionary())
+        )
+        .ToImmutableDictionary();
 
         // note that we excluded cancelled receivables from our report
         var reportedReceivables = summaryOnly ? null : await receivables.ToListAsync();

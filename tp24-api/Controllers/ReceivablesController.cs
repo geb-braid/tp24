@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using tp24_api.Models;
 
 namespace tp24_api.Controllers
@@ -14,7 +13,9 @@ namespace tp24_api.Controllers
 
         // GET: api/receivables
         [HttpGet]
-        public async Task<ActionResult<ReceivablesReport>> GetReceivables([FromQuery] DateTime startDate, [FromQuery] bool summaryOnly = false)
+        public async Task<ActionResult<ReceivablesReport>> GetReceivables(
+            [FromQuery] DateTime startDate,
+            [FromQuery] bool summaryOnly = false)
         {
             return await _repository.Read(startDate, summaryOnly);
         }
