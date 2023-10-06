@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using tp24_api.Models;
 
@@ -23,19 +17,53 @@ namespace tp24_api.Controllers
 
         // GET: api/receivables
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Receivable>>> GetReceivables([FromQuery] bool summary = false)
+        public async Task<ActionResult<ReceivablesReport>> GetReceivables([FromQuery] DateTime startDate, [FromQuery] bool summaryOnly = false)
         {
             if (_context.Receivables == null)
             {
                 return NotFound();
             }
 
-            if (summary)
-            {
-                return Problem(detail: "Nir supplied a summary...");
-            }
+            var receivables =
+            (
+                from r in _context.Receivables.AsQueryable<Receivable>()
+                where r.IssueDate > startDate && r.Cancelled != true
+                select r
+            ).AsAsyncEnumerable();
 
-            return await _context.Receivables.ToListAsync();
+            // I tried combining the below query with the above, so that it's
+            // processed server-side, but translating that LINQ query to the
+            // in-memory provider was not supported by the framework.
+
+            // IsOpen -> CurrencyCode -> (Total, Max)
+            var statsGroupings =
+                from receivable in receivables
+                group receivable by new
+                {
+                    IsOpen = !receivable.ClosedDate.HasValue
+                } into openClosedReceivables
+                from currencyValues in
+                (
+                    from receivable in openClosedReceivables
+                    group receivable by receivable.CurrencyCode into currencies
+                    select new
+                    {
+                        CurrencyCode = currencies.Key,
+                        Total = currencies.SumAsync(r => (r.OpeningValue ?? 0m) - (r.PaidValue ?? 0m)),
+                        Max = currencies.MaxAsync(r => (r.OpeningValue ?? 0m) - (r.PaidValue ?? 0m))
+                    }
+                )
+                group currencyValues by openClosedReceivables.Key;
+
+            var statsByStatusAndCurrency = await statsGroupings.ToDictionaryAwaitAsync(
+                grouping => ValueTask.FromResult(grouping.Key.IsOpen ? "Open" : "Closed"),
+                async grouping => await grouping.ToDictionaryAwaitAsync(
+                    line => ValueTask.FromResult(line.CurrencyCode),
+                    async line => new Stats (await line.Total, await line.Max)));
+
+            // note that we do not list cancelled receivables
+            var reportedReceivables = summaryOnly ? null : await receivables.ToListAsync();
+            return new ReceivablesReport(statsByStatusAndCurrency, reportedReceivables);
         }
 
         // GET: api/receivables/5
@@ -108,7 +136,7 @@ namespace tp24_api.Controllers
 
             _context.Receivables.Add(receivable);
             await _context.SaveChangesAsync();
- 
+
             return CreatedAtAction(nameof(GetReceivable), new { id = receivable.Id }, receivable);
         }
 
