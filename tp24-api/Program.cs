@@ -25,3 +25,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// expose for integ tests
+public partial class Program { }

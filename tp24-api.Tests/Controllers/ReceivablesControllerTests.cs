@@ -4,7 +4,7 @@ using Moq;
 using tp24_api.Controllers;
 using tp24_api.Models;
 
-namespace tp24_api.Tests;
+namespace tp24_api.Tests.Controllers;
 
 public class ReceivablesControllerTests
 {
