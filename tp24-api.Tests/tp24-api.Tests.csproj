@@ -29,4 +29,8 @@
     <ProjectReference Include="..\tp24-api\tp24-api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
