@@ -52,6 +52,7 @@ public class ReceivablesRepository : IReceivablesRepository
                 {
                     CurrencyCode = currencies.Key,
                     Total = currencies.SumAsync(PaymentRemainder),
+                    Count = currencies.CountAsync(),
                     Max = currencies.MaxAsync(PaymentRemainder)
                 }
             )
@@ -68,7 +69,7 @@ public class ReceivablesRepository : IReceivablesRepository
                             keySelector: line =>
                                 ValueTask.FromResult(line.CurrencyCode),
                             elementSelector: async line =>
-                                new Stats (await line.Total, await line.Max))
+                                new Stats (await line.Total, await line.Count, await line.Max))
                     )
                     .ToImmutableDictionary())
         )

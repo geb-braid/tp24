@@ -6,4 +6,4 @@ public readonly record struct ReceivablesReport(
     ImmutableDictionary<string, ImmutableDictionary<string, Stats>> Summary,
     IEnumerable<Receivable>? Receivables = null);
 
-public readonly record struct Stats(decimal Total, decimal Max);
+public readonly record struct Stats(decimal Total, int Count, decimal Max);
